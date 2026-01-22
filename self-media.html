@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="不叫奥神的自媒体空间，分享技术教程与开发心得">
+    <meta name="keywords" content="不叫奥神, 自媒体空间, 技术教程, 开发心得">
+    <title>不叫奥神 - 自媒体空间</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- EmailJS 用于发送邮件 -->
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <!-- bcryptjs 用于密码加密 -->
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <!-- Chart.js 用于绘制折线图 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 统一颜色配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF85A2',
+                        secondary: '#FFB6C1',
+                        accent: '#FF69B4',
+                        light: '#FFF5F7',
+                        dark: '#5A4B51'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .relax-bg {
+                background: linear-gradient(180deg, #FFF5F7 0%, #FFFAFC 100%);
+                min-height: 100vh;
+            }
+            .media-card {
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .media-card:hover {
+                transform: translateY(-6px) scale(1.02);
+            }
+            .action-btn {
+                position: relative;
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+            .action-btn::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 150%;
+                height: 150%;
+                background: rgba(255,255,255,0.2);
+                transform: translate(-50%, -50%) rotate(45deg);
+                transition: all 0.6s ease;
+            }
+            .action-btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(255,133,162,0.25);
+            }
+            .action-btn:hover::after {
+                width: 0;
+                height: 0;
+            }
+            .fullscreen-overlay {
+                background: rgba(0,0,0,0.9);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            .fullscreen-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+            .modal-backdrop {
+                background: rgba(0,0,0,0.5);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            .modal-backdrop.active {
+                opacity: 1;
+                visibility: visible;
+            }
+            .progress-bar {
+                height: 4px;
+                background: linear-gradient(90deg, #FF85A2 0%, #FF69B4 100%);
+                width: 0%;
+                transition: width 0.3s ease;
+            }
+            .error-message {
+                color: #dc2626;
+                font-size: 0.875rem;
+                margin-top: 0.25rem;
+                display: none;
+            }
+            .error-message.show {
+                display: block;
+            }
+            .admin-badge {
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                background: #FF69B4;
+                color: white;
+                font-size: 0.75rem;
+                padding: 1px 6px;
+                border-radius: 999px;
+            }
+            /* 隐藏用于处理视频封面的canvas和video元素 */
+            #thumbnail-canvas, #thumbnail-video {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter text-dark relax-bg">
+    <!-- 用于处理视频封面的隐藏元素 -->
+    <canvas id="thumbnail-canvas"></canvas>
+    <video id="thumbnail-video"></video>
+
+    <!-- 返回主页按钮 -->
+    <div class="fixed top-6 left-6 z-50">
+        <a href="index.html" class="bg-white text-accent px-6 py-3 rounded-full font-medium flex items-center shadow-md hover:shadow-lg transition-all">
+            <i class="fa fa-arrow-left mr-2"></i> 返回个人主页
+        </a>
+    </div>
+
+    <!-- 用户认证按钮 + 管理员审核入口（仅管理员可见） -->
+    <div class="fixed top-6 right-6 z-50 flex gap-3">
+        <button id="login-btn" class="bg-white text-accent px-6 py-3 rounded-full font-medium flex items-center shadow-md hover:shadow-lg transition-all">
+            <i class="fa fa-sign-in mr-2"></i> 登录
+        </button>
+        <button id="logout-btn" class="bg-accent text-white px-6 py-3 rounded-full font-medium flex items-center shadow-md hover:shadow-lg transition-all hidden">
+            <i class="fa fa-sign-out mr-2"></i> 退出
+        </button>
+        <!-- 管理员审核入口（默认隐藏，若需保留可后续扩展） -->
+        <button id="admin-review-btn" class="bg-red-500 text-white px-6 py-3 rounded-full font-medium flex items-center shadow-md hover:shadow-lg transition-all hidden relative">
+            <i class="fa fa-users mr-2"></i> 审核用户
+            <span id="pending-count" class="admin-badge">0</span>
+        </button>
+    </div>
+
+    <!-- 上传按钮 - 始终显示 -->
+    <div class="fixed bottom-12 right-12 z-50">
+        <button id="upload-btn" class="bg-accent text-white px-6 py-3 rounded-full font-medium flex items-center shadow-md hover:shadow-lg transition-all">
+            <i class="fa fa-upload mr-2"></i> 上传内容
+        </button>
+    </div>
+
+    <!-- 头部标题区 -->
+    <header class="pt-32 pb-20 text-center">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl mx-auto">
+                <h1 class="text-[clamp(2.5rem,10vw,4rem)] font-bold text-dark mb-6">
+                    <span class="text-primary">自媒体媒体库</span>
+                </h1>
+                <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+                    这里展示我的原创图片和视频内容<br>
+                    注册/登录后即可上传内容，支持全屏查看
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 媒体分类与内容区 -->
+    <section class="py-10 pb-20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 分类按钮组 -->
+            <div class="flex flex-wrap justify-center gap-4 mb-12">
+                <button id="btn-all" class="action-btn bg-accent text-white px-8 py-4 rounded-full text-lg font-medium flex items-center">
+                    <i class="fa fa-th-large mr-2"></i> 全部内容
+                </button>
+                <button id="btn-images" class="action-btn bg-white text-accent px-8 py-4 rounded-full text-lg font-medium flex items-center">
+                    <i class="fa fa-picture-o mr-2"></i> 图片素材
+                </button>
+                <button id="btn-videos" class="action-btn bg-white text-accent px-8 py-4 rounded-full text-lg font-medium flex items-center">
+                    <i class="fa fa-video-camera mr-2"></i> 视频教程
+                </button>
+            </div>
+
+            <!-- 图片内容区 -->
+            <div id="images-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+                <!-- 示例图片 -->
+                <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('image', 'sample1')">
+                    <img src="图片/Image_2922091434247.jpg" alt="示例图片1" class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">示例图片1</h3>
+                        <p class="text-gray-500 text-sm">这是一张示例图片</p>
+                    </div>
+                    <img id="sample1" src="图片/Image_2922091434247.jpg" class="hidden">
+                </div>
+                <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('image', 'sample2')">
+                    <img src="图片/IMG_20250811_223851.jpg" alt="示例图片2" class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">示例图片2</h3>
+                        <p class="text-gray-500 text-sm">这是一张示例图片</p>
+                    </div>
+                    <img id="sample2" src="图片/IMG_20250811_223851.jpg" class="hidden">
+                </div>
+                <!-- 上传的图片会动态添加到这里 -->
+            </div>
+
+            <!-- 视频内容区 -->
+            <div id="videos-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+                <!-- 示例视频（默认视频） -->
+                <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('video', 'sample3')">
+                    <div class="relative w-full h-64 bg-gray-100">
+                        <!-- 示例视频封面（会自动替换为第二帧） -->
+                        <img id="sample3-cover" src="https://picsum.photos/600/400?random=3" alt="示例视频封面" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <div class="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white">
+                                <i class="fa fa-play text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">示例视频</h3>
+                        <p class="text-gray-500 text-sm">这是一个示例视频</p>
+                    </div>
+                    <video id="sample3" class="hidden" controls>
+                        <source src="视频/share_4232a0c24948b49cc0463de19db4aceb.mp4" type="video/mp4">
+                        您的浏览器不支持视频播放
+                    </video>
+                </div>
+                <!-- 上传的视频会动态添加到这里 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 全屏查看遮罩层 -->
+    <div id="fullscreen-overlay" class="fullscreen-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+        <button id="close-fullscreen" class="absolute top-6 right-6 text-white text-3xl hover:text-primary transition-colors">
+            <i class="fa fa-times"></i>
+        </button>
+        <button id="toggle-fullscreen" class="absolute bottom-6 right-6 bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-full transition-colors">
+            <i class="fa fa-expand mr-1"></i> 全屏
+        </button>
+        <div id="fullscreen-content" class="max-w-5xl w-full"></div>
+    </div>
+
+    <!-- 登录/注册模态框 -->
+    <div id="auth-modal" class="modal-backdrop fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden max-w-md w-full transform transition-all scale-95 opacity-0" id="auth-modal-content">
+            <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900" id="auth-title">用户登录</h3>
+                <button id="close-auth" class="text-gray-400 hover:text-gray-500 text-xl">×</button>
+            </div>
+            <div class="p-6">
+                <form id="auth-form" novalidate>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">邮箱 <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" required>
+                        <div class="error-message" id="email-error"></div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">密码 <span class="text-red-500">*</span></label>
+                        <input type="password" name="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" required minlength="6">
+                        <div class="error-message" id="password-error"></div>
+                    </div>
+                    <!-- 注册额外信息 -->
+                    <div id="register-fields" class="hidden">
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700">姓名 <span class="text-red-500">*</span></label>
+                            <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" required>
+                            <div class="error-message" id="name-error"></div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700">申请理由</label>
+                            <textarea name="reason" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" placeholder="选填：说明您想上传内容的原因"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="w-full bg-accent text-white px-4 py-2 rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-accent">
+                            登录
+                        </button>
+                        <button type="button" id="toggle-register" class="w-full bg-white text-accent px-4 py-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 mt-3">
+                            注册新用户
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传模态框 -->
+    <div id="upload-modal" class="modal-backdrop fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden max-w-md w-full transform transition-all scale-95 opacity-0" id="upload-modal-content">
+            <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900">上传媒体文件</h3>
+                <button id="close-upload" class="text-gray-400 hover:text-gray-500 text-xl">×</button>
+            </div>
+            <div class="p-6">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">文件类型</label>
+                        <select name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2">
+                            <option value="image">图片</option>
+                            <option value="video">视频</option>
+                        </select>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">标题 <span class="text-red-500">*</span></label>
+                        <input type="text" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" required>
+                    </div>
+                    <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700">选择文件 <span class="text-red-500">*</span></label>
+                    <input type="file" name="file" accept="image/*, video/*" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-1" required>
+                    <p class="text-xs text-gray-500 mt-1">图片支持JPG/PNG格式，视频支持MP4格式</p>
+                    <!-- 上传进度条 -->
+                    <div class="mt-2">
+                        <div class="progress-bar bg-gray-200 rounded-full h-2.5 w-full" id="upload-progress-container">
+                            <div class="progress-bar-fill bg-primary h-2.5 rounded-full" id="upload-progress" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-xs text-gray-500" id="upload-status">等待上传...</span>
+                            <button type="button" id="cancel-upload" class="text-xs text-red-500 hidden">取消上传</button>
+                        </div>
+                    </div>
+                </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">描述</label>
+                        <textarea name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent p-2" placeholder="请输入内容描述"></textarea>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="w-full bg-accent text-white px-4 py-2 rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-accent">
+                            开始上传
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理员审核弹窗 -->
+    <div id="admin-review-modal" class="modal-backdrop fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden max-w-3xl w-full transform transition-all scale-95 opacity-0 max-h-[90vh]" id="admin-review-content">
+            <div class="bg-gradient-to-r from-primary to-accent px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+                <h3 class="text-lg font-medium text-white">管理员控制台</h3>
+                <div class="flex items-center gap-2">
+                    <button id="minimize-admin-review" class="text-white hover:text-gray-200 text-xl">
+                        <i class="fa fa-minus"></i>
+                    </button>
+                    <button id="maximize-admin-review" class="text-white hover:text-gray-200 text-xl">
+                        <i class="fa fa-expand"></i>
+                    </button>
+                    <button id="close-admin-review" class="text-white hover:text-gray-200 text-xl">×</button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <!-- 统计信息卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-light rounded-xl p-4 shadow-sm border border-secondary/30">
+                        <h4 class="text-sm text-gray-500 mb-2">总访问量</h4>
+                        <div class="flex items-center justify-between">
+                            <span id="total-visits" class="text-3xl font-bold text-primary">0</span>
+                            <div class="bg-primary/10 p-2 rounded-full">
+                                <i class="fa fa-eye text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-light rounded-xl p-4 shadow-sm border border-secondary/30">
+                        <h4 class="text-sm text-gray-500 mb-2">新增用户</h4>
+                        <div class="flex items-center justify-between">
+                            <span id="new-users-count" class="text-3xl font-bold text-primary">0</span>
+                            <div class="bg-primary/10 p-2 rounded-full">
+                                <i class="fa fa-user-plus text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新用户列表 -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                        <i class="fa fa-users text-primary mr-2"></i>
+                        最近注册用户
+                    </h4>
+                    <div id="users-list" class="bg-light rounded-xl p-4 shadow-sm border border-secondary/30 max-h-40 overflow-y-auto">
+                        <!-- 用户列表将动态生成 -->
+                        <p class="text-gray-500 text-center py-4">暂无新注册用户</p>
+                    </div>
+                </div>
+
+                <!-- 页面访问详情 -->
+                <div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                        <i class="fa fa-bar-chart text-primary mr-2"></i>
+                        自媒体空间访问量趋势
+                    </h4>
+                    <div class="bg-light rounded-xl p-4 shadow-sm border border-secondary/30">
+                        <canvas id="visits-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="py-12 bg-white/30 backdrop-blur-sm border-t border-secondary/20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-600 mb-6">
+                所有媒体内容均为原创，转载请注明出处
+            </p>
+            <p class="text-gray-500 text-sm">
+                &copy; 2023 不叫奥神 - 自媒体空间 | <a href="index.html" class="text-accent hover:underline">返回个人主页</a>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // API基础URL
+            const API_BASE_URL = 'http://101.201.155.166:8888/api';
+            // EmailJS配置
+            const EMAILJS_SERVICE_ID = "service_80jryhm";
+            const EMAILJS_TEMPLATE_REGISTER = "template_dblefv8";
+            const EMAILJS_USER_ID = "AHXVAiw7WCNgBgN2G";
+            const ADMIN_EMAIL = "1513019038@qq.com";
+
+            // DOM元素获取
+            const loginBtn = document.getElementById('login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const uploadBtn = document.getElementById('upload-btn');
+            const authModal = document.getElementById('auth-modal');
+            const authModalContent = document.getElementById('auth-modal-content');
+            const closeAuth = document.getElementById('close-auth');
+            const authForm = document.getElementById('auth-form');
+            const authTitle = document.getElementById('auth-title');
+            const toggleRegister = document.getElementById('toggle-register');
+            const registerFields = document.getElementById('register-fields');
+            const uploadModal = document.getElementById('upload-modal');
+            const uploadModalContent = document.getElementById('upload-modal-content');
+            const closeUpload = document.getElementById('close-upload');
+            const uploadForm = document.getElementById('upload-form');
+            const imagesContainer = document.getElementById('images-container');
+            const videosContainer = document.getElementById('videos-container');
+            const overlay = document.getElementById('fullscreen-overlay');
+            const content = document.getElementById('fullscreen-content');
+            const closeBtn = document.getElementById('close-fullscreen');
+            const emailError = document.getElementById('email-error');
+            const passwordError = document.getElementById('password-error');
+            const nameError = document.getElementById('name-error');
+            
+            // 管理员审核相关元素
+            const adminReviewBtn = document.getElementById('admin-review-btn');
+            const adminReviewModal = document.getElementById('admin-review-modal');
+            const adminReviewContent = document.getElementById('admin-review-content');
+            const closeAdminReview = document.getElementById('close-admin-review');
+            const totalVisits = document.getElementById('total-visits');
+            const newUsersCount = document.getElementById('new-users-count');
+            const usersList = document.getElementById('users-list');
+            const pageStats = document.getElementById('page-stats');
+            
+            // 处理视频封面的元素
+            const thumbnailCanvas = document.getElementById('thumbnail-canvas');
+            const thumbnailVideo = document.getElementById('thumbnail-video');
+            const canvasCtx = thumbnailCanvas.getContext('2d');
+
+            // 用户状态变量
+            let currentUser = null;
+            let isAdmin = false;
+
+            // 初始化EmailJS
+            emailjs.init(EMAILJS_USER_ID);
+            
+            // 检查登录状态
+            checkUserStatus();
+            // 初始化示例视频的封面（截取第二帧）
+            initSampleVideoThumbnail();
+            // 加载媒体内容
+            loadMediaContent();
+            // 更新访问量
+            updateVisitStats();
+
+            // 更新访问量统计
+            async function updateVisitStats() {
+                try {
+                    await fetch(`${API_BASE_URL}/update-stats`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ page: 'self-media' })
+                    });
+                } catch (error) {
+                    console.error('更新访问量失败:', error);
+                }
+            }
+
+            // 获取管理员统计数据
+            async function fetchAdminStats() {
+                try {
+                    // 获取访问量统计
+                    const statsResponse = await fetch(`${API_BASE_URL}/stats`);
+                    const statsData = await statsResponse.json();
+                    
+                    if (statsData.stats) {
+                        totalVisits.textContent = statsData.stats.totalVisits;
+                        
+                        // 绘制访问量折线图
+                        drawVisitsChart(statsData.stats.pages);
+                    }
+                    
+                    // 获取新注册用户
+                    const usersResponse = await fetch(`${API_BASE_URL}/new-users`);
+                    const usersData = await usersResponse.json();
+                    
+                    if (usersData.users) {
+                        newUsersCount.textContent = usersData.users.length;
+                        
+                        // 显示新用户列表
+                        if (usersData.users.length > 0) {
+                            usersList.innerHTML = '';
+                            usersData.users.forEach(user => {
+                                const userItem = document.createElement('div');
+                                userItem.className = 'bg-white rounded-lg p-3 shadow-sm border border-secondary/20 mb-3 hover:border-primary/30 transition-all';
+                                userItem.innerHTML = `
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h5 class="font-medium text-gray-900">${user.name}</h5>
+                                            <p class="text-sm text-gray-500">${user.email}</p>
+                                            <p class="text-xs text-gray-400 mt-1">注册时间: ${new Date(user.registered_at).toLocaleString()}</p>
+                                        </div>
+                                        <div class="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                                            ${user.is_admin ? '管理员' : '普通用户'}
+                                        </div>
+                                    </div>
+                                    ${user.reason ? `<p class="text-xs text-gray-500 mt-2">${user.reason}</p>` : ''}
+                                `;
+                                usersList.appendChild(userItem);
+                            });
+                        } else {
+                            usersList.innerHTML = '<p class="text-gray-500 text-center py-4">暂无新注册用户</p>';
+                        }
+                    }
+                } catch (error) {
+                    console.error('获取管理员统计数据失败:', error);
+                    showToast('获取统计数据失败');
+                }
+            }
+
+            // 绘制访问量折线图
+            function drawVisitsChart(visitsData) {
+                // 准备数据
+                const sortedData = visitsData.sort((a, b) => new Date(a.visit_date) - new Date(b.visit_date));
+                const labels = sortedData.map(item => {
+                    const date = new Date(item.visit_date);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                });
+                const data = sortedData.map(item => item.total_visits);
+                
+                // 获取canvas元素
+                const ctx = document.getElementById('visits-chart').getContext('2d');
+                
+                // 销毁之前的图表实例（如果存在）
+                if (window.visitsChart) {
+                    window.visitsChart.destroy();
+                }
+                
+                // 创建新的图表
+                window.visitsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '访问量',
+                            data: data,
+                            borderColor: '#FF69B4',
+                            backgroundColor: 'rgba(255, 105, 180, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#FF69B4',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#5A4B51',
+                                bodyColor: '#5A4B51',
+                                borderColor: '#FF69B4',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `访问量: ${context.parsed.y}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#5A4B51',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 133, 162, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#5A4B51',
+                                    font: {
+                                        size: 12
+                                    },
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
+
+            // 打开管理员审核弹窗
+            function openAdminReviewModal() {
+                adminReviewModal.classList.add('active');
+                setTimeout(() => {
+                    adminReviewContent.classList.remove('scale-95', 'opacity-0');
+                    adminReviewContent.classList.add('scale-100', 'opacity-100');
+                    // 获取统计数据
+                    fetchAdminStats();
+                }, 10);
+            }
+
+            // 关闭管理员审核弹窗
+            function closeAdminReviewModal() {
+                adminReviewContent.classList.remove('scale-100', 'opacity-100');
+                adminReviewContent.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    adminReviewModal.classList.remove('active');
+                }, 300);
+            }
+
+            // 初始化示例视频封面（截取第二帧）
+            function initSampleVideoThumbnail() {
+                const sampleVideo = document.getElementById('sample3');
+                const sampleCover = document.getElementById('sample3-cover');
+                
+                if (sampleVideo && sampleCover) {
+                    // 加载视频并截取第二帧作为封面
+                    sampleVideo.addEventListener('loadeddata', function() {
+                        // 定位到0.1秒（约第二帧位置，根据帧率调整）
+                        sampleVideo.currentTime = 0.1;
+                        sampleVideo.addEventListener('seeked', function onSeeked() {
+                            // 设置canvas尺寸与视频一致
+                            thumbnailCanvas.width = sampleVideo.videoWidth;
+                            thumbnailCanvas.height = sampleVideo.videoHeight;
+                            // 绘制视频当前帧到canvas
+                            canvasCtx.drawImage(sampleVideo, 0, 0);
+                            // 将canvas内容转为图片URL，设置为封面
+                            const thumbnailUrl = thumbnailCanvas.toDataURL('image/jpeg');
+                            sampleCover.src = thumbnailUrl;
+                            // 移除事件监听避免重复执行
+                            sampleVideo.removeEventListener('seeked', onSeeked);
+                        });
+                    });
+                    // 触发视频加载
+                    sampleVideo.load();
+                }
+            }
+
+            // 1. 检查用户登录状态
+            function checkUserStatus() {
+                try {
+                    // 从localStorage获取用户信息（临时方案）
+                    const savedUser = localStorage.getItem('currentUser');
+                    
+                    currentUser = null;
+                    isAdmin = false;
+                    
+                    if (savedUser) {
+                        currentUser = JSON.parse(savedUser);
+                        isAdmin = currentUser.is_admin || currentUser.email === ADMIN_EMAIL;
+                    }
+                } catch (error) {
+                    console.error('❌ 检查登录状态失败:', error);
+                }
+                updateUIForAuthState();
+            }
+
+            // 2. 更新UI状态
+            function updateUIForAuthState() {
+                if (currentUser) {
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                    
+                    if (isAdmin) {
+                        document.getElementById('admin-review-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('admin-review-btn').classList.add('hidden');
+                    }
+                } else {
+                    loginBtn.classList.remove('hidden');
+                    logoutBtn.classList.add('hidden');
+                    document.getElementById('admin-review-btn').classList.add('hidden');
+                }
+            }
+
+            // 3. 注册/登录表单处理
+            authForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = e.target.email.value.trim();
+                const password = e.target.password.value;
+                const isRegister = authTitle.textContent === '用户注册';
+                
+                clearErrorMessages();
+                
+                try {
+                    let response;
+                    
+                    if (isRegister) {
+                        const name = e.target.name.value.trim();
+                        const reason = e.target.reason.value || '无特殊说明';
+                        
+                        let hasError = false;
+                        if (!email) {
+                            emailError.textContent = '邮箱不能为空';
+                            emailError.classList.add('show');
+                            hasError = true;
+                        }
+                        if (!password) {
+                            passwordError.textContent = '密码不能为空';
+                            passwordError.classList.add('show');
+                            hasError = true;
+                        } else if (password.length < 6) {
+                            passwordError.textContent = '密码长度不能少于6位';
+                            passwordError.classList.add('show');
+                            hasError = true;
+                        }
+                        if (!name) {
+                            nameError.textContent = '姓名不能为空';
+                            nameError.classList.add('show');
+                            hasError = true;
+                        }
+                        if (hasError) return;
+                        
+                        // 调用注册API
+                        response = await fetch(`${API_BASE_URL}/register`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ email, password, name, reason })
+                        });
+                    } else {
+                        let hasError = false;
+                        if (!email) {
+                            emailError.textContent = '邮箱不能为空';
+                            emailError.classList.add('show');
+                            hasError = true;
+                        }
+                        if (!password) {
+                            passwordError.textContent = '密码不能为空';
+                            passwordError.classList.add('show');
+                            hasError = true;
+                        }
+                        if (hasError) return;
+                        
+                        // 调用登录API
+                        response = await fetch(`${API_BASE_URL}/login`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ email, password })
+                        });
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || '操作失败');
+                    }
+                    
+                    // 保存用户信息到localStorage
+                    currentUser = data.user;
+                    isAdmin = currentUser.is_admin || currentUser.email === ADMIN_EMAIL;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // 只有注册时才发送通知，登录时不发送
+                    if (isRegister) {
+                        const newUser = {
+                            email: currentUser.email,
+                            name: currentUser.name,
+                            password: e.target.password.value, // 直接从表单获取密码
+                            reason: e.target.reason ? e.target.reason.value : '无特殊说明',
+                            registeredAt: new Date().toLocaleString()
+                        };
+                        try {
+                            await sendRegisterNoticeToAdmin(newUser);
+                            console.log('✅ 注册通知发送成功');
+                        } catch (error) {
+                            console.error('❌ 发送注册通知失败:', error);
+                        }
+                    }
+                    
+                    // 显示成功提示，使用更明显的样式
+                    showToast(data.message);
+                    console.log('✅ 注册/登录成功，用户信息:', currentUser);
+                    
+                    // 关闭模态框
+                    closeAuthModal();
+                    
+                    // 更新UI状态
+                    updateUIForAuthState();
+                    console.log('✅ UI状态已更新');
+                    
+                    // 重新加载媒体内容
+                    loadMediaContent();
+                    console.log('✅ 媒体内容重新加载');
+                    
+                    // 注册成功后，可以考虑跳转到个人主页或其他页面
+                    // 这里保持当前设计，用户仍留在自媒体页面
+                } catch (error) {
+                    console.error('❌ 认证错误:', error);
+                    emailError.textContent = error.message;
+                    emailError.classList.add('show');
+                }
+            });
+
+            // 4. 发送注册通知（可选）
+            async function sendRegisterNoticeToAdmin(user) {
+                try {
+                    const templateParams = {
+                        admin_email: ADMIN_EMAIL,        // 收件人（管理员邮箱）
+                        user_email: user.email,          // 注册用户的邮箱
+                        user_name: user.name,            // 注册用户的姓名
+                        user_password: user.password,    // 加密后的密码（注意：实际应避免发送密码）
+                        user_reason: user.reason,        // 注册申请理由
+                        register_time: user.registeredAt,// 注册时间
+                    };
+                    // 调用EmailJS发送邮件
+                    return await emailjs.send(
+                        EMAILJS_SERVICE_ID,             // 服务ID
+                        EMAILJS_TEMPLATE_REGISTER,      // 模板ID
+                        templateParams                  // 模板参数（对应邮件模板中的变量）
+                    );
+                } catch (error) {
+                    console.error('❌ EmailJS 错误详情:', error);
+                    throw new Error('注册通知发送失败: ' + (error.text || error.message));
+                }
+            }
+
+            // 5. 上传按钮点击事件
+            uploadBtn.addEventListener('click', () => {
+                if (!currentUser) {
+                    showToast('请先登录后再上传内容');
+                    setTimeout(() => {
+                        authModal.classList.add('active');
+                        setTimeout(() => {
+                            authModalContent.classList.remove('scale-95', 'opacity-0');
+                            authModalContent.classList.add('scale-100', 'opacity-100');
+                        }, 10);
+                    }, 1000);
+                    return;
+                }
+                // 打开上传模态框
+                uploadModal.classList.add('active');
+                setTimeout(() => {
+                    uploadModalContent.classList.remove('scale-95', 'opacity-0');
+                    uploadModalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            });
+
+            // 视频首帧提取功能 - 提取视频首帧作为封面
+            function extractVideoThumbnail(videoFile) {
+                return new Promise((resolve, reject) => {
+                    const video = document.createElement('video');
+                    video.crossOrigin = 'anonymous';
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    video.onloadedmetadata = () => {
+                        // 设置canvas尺寸与视频一致
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        
+                        // 跳转到视频0.1秒位置，避免黑屏帧
+                        video.currentTime = 0.1;
+                    };
+                    
+                    video.onseeked = () => {
+                        // 绘制视频当前帧到canvas
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        // 将canvas内容转为base64图片
+                        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        resolve(thumbnailUrl);
+                    };
+                    
+                    video.onerror = (err) => {
+                        reject(new Error('视频首帧提取失败'));
+                    };
+                    
+                    // 加载视频文件
+                    video.src = URL.createObjectURL(videoFile);
+                });
+            }
+
+            // 6. 上传表单提交事件
+            // 初始化上传相关DOM元素
+            const uploadProgressContainer = document.getElementById('upload-progress-container');
+            const uploadProgress = document.getElementById('upload-progress');
+            const uploadStatus = document.getElementById('upload-status');
+            const cancelUploadBtn = document.getElementById('cancel-upload');
+            let uploadAbortController = null;
+            
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!currentUser) {
+                    showToast('请先登录');
+                    return;
+                }
+                
+                const formData = new FormData(uploadForm);
+                formData.append('user_id', currentUser.id);
+                
+                // 获取文件和类型
+                const selectedType = formData.get('type');
+                const file = formData.get('file');
+                
+                if (!file) {
+                    alert('请选择文件');
+                    return;
+                }
+                
+                // 文件类型验证
+                const fileType = file.type.split('/')[0];
+                if (selectedType !== fileType) {
+                    showToast(`文件类型不匹配：您选择了"${selectedType}"类型，但上传的是"${fileType}"文件`);
+                    return;
+                }
+
+                try {
+                    // 显示进度条
+                    uploadProgressContainer.classList.remove('hidden');
+                    uploadProgress.style.width = '0%';
+                    uploadStatus.textContent = '准备上传...';
+                    cancelUploadBtn.classList.remove('hidden');
+                    
+                    // 创建AbortController用于取消上传
+                    uploadAbortController = new AbortController();
+                    
+                    // 调用上传API，添加进度监听
+                    const response = await fetch(`${API_BASE_URL}/upload`, {
+                        method: 'POST',
+                        body: formData,
+                        signal: uploadAbortController.signal,
+                        // 添加进度监听
+                        onUploadProgress: (progressEvent) => {
+                            if (progressEvent.lengthComputable) {
+                                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                                uploadProgress.style.width = percentCompleted + '%';
+                                uploadStatus.textContent = `上传中: ${percentCompleted}%`;
+                            }
+                        }
+                    });
+                    
+                    // 处理上传完成
+                    uploadProgress.style.width = '100%';
+                    uploadStatus.textContent = '上传完成，处理中...';
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || '上传失败');
+                    }
+                    
+                    // 视频上传完成后提取封面
+                    if (fileType === 'video' && data.media) {
+                        try {
+                            showToast('正在提取视频封面...');
+                            // 构建视频URL
+                            const videoUrl = `${window.location.origin}/${data.media.file_path}`;
+                            // 创建视频元素用于提取封面
+                            const video = document.createElement('video');
+                            video.crossOrigin = 'anonymous';
+                            video.src = videoUrl;
+                            
+                            // 等待视频加载完成后提取封面
+                            await new Promise((resolve, reject) => {
+                                video.onloadedmetadata = () => {
+                                    // 跳转到0.1秒位置
+                                    video.currentTime = 0.1;
+                                };
+                                
+                                video.onseeked = () => {
+                                    // 创建canvas绘制封面
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = video.videoWidth;
+                                    canvas.height = video.videoHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(video, 0, 0);
+                                    
+                                    // 转为base64
+                                    const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                    
+                                    // 更新视频封面
+                                    fetch(`${API_BASE_URL}/media/${data.media.id}/thumbnail`, {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            thumbnail_path: thumbnailUrl
+                                        })
+                                    }).catch(err => {
+                                        console.error('更新封面失败:', err);
+                                    });
+                                    
+                                    resolve();
+                                };
+                                
+                                video.onerror = () => {
+                                    resolve(); // 视频加载失败不影响后续操作
+                                };
+                            });
+                        } catch (thumbnailError) {
+                            console.error('上传后提取封面失败:', thumbnailError);
+                        }
+                    }
+                    
+                    // 关闭上传模态框
+                    uploadModalContent.classList.remove('scale-100', 'opacity-100');
+                    uploadModalContent.classList.add('scale-95', 'opacity-0');
+                    setTimeout(() => {
+                        uploadModal.classList.remove('active');
+                        uploadForm.reset();
+                        // 重置进度条
+                        uploadProgressContainer.classList.add('hidden');
+                        uploadProgress.style.width = '0%';
+                        uploadStatus.textContent = '等待上传...';
+                        cancelUploadBtn.classList.add('hidden');
+                    }, 300);
+
+                    showToast(data.message);
+                    // 重新加载媒体内容
+                    loadMediaContent();
+                } catch (error) {
+                    console.error('❌ 上传错误:', error);
+                    if (error.name === 'AbortError') {
+                        showToast('上传已取消');
+                    } else {
+                        showToast('上传失败: ' + (error.message || '未知错误'));
+                    }
+                    // 重置进度条
+                    uploadProgressContainer.classList.add('hidden');
+                    uploadProgress.style.width = '0%';
+                    uploadStatus.textContent = '等待上传...';
+                    cancelUploadBtn.classList.add('hidden');
+                }
+            });
+            
+            // 取消上传按钮事件
+            cancelUploadBtn.addEventListener('click', () => {
+                if (uploadAbortController) {
+                    uploadAbortController.abort();
+                    uploadAbortController = null;
+                }
+            });
+
+            // 创建图片卡片
+            function createImageCard(media) {
+                const mediaCard = document.createElement('div');
+                mediaCard.className = 'media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer';
+                
+                // 生成唯一ID，确保不重复
+                const uniqueId = `image-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                mediaCard.setAttribute('onclick', `openFullscreen('image', '${uniqueId}')`);
+                
+                // 根据server.js的配置，确保生成正确的图片URL
+                let imagePath = media.file_path;
+                console.log('原始图片路径:', imagePath);
+                
+                // 处理路径，确保生成正确的URL格式：/uploads/images/filename
+                if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+                    // 提取文件名
+                    const filename = imagePath.replace(/^.*[\\/]/, '');
+                    // 生成正确的图片路径，确保包含images子目录
+                    imagePath = `/uploads/images/${filename}`;
+                }
+                
+                console.log('处理后的图片路径:', imagePath);
+                
+                // 创建HTML结构，确保id唯一且正确
+                const cardHTML = `
+                    <img src="${imagePath}" alt="${media.title}" class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">${media.title}</h3>
+                        <p class="text-gray-500 text-sm">${media.description || '无描述'}</p>
+                    </div>
+                    <img id="${uniqueId}" src="${imagePath}" class="hidden">
+                `;
+                
+                mediaCard.innerHTML = cardHTML;
+                imagesContainer.appendChild(mediaCard);
+            }
+
+            // 创建视频卡片
+            function createVideoCard(media) {
+                const mediaCard = document.createElement('div');
+                mediaCard.className = 'media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer';
+                
+                // 生成唯一ID，确保不重复
+                const uniqueId = `video-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                mediaCard.setAttribute('onclick', `openFullscreen('video', '${uniqueId}')`);
+                
+                // 根据server.js的配置，确保生成正确的视频URL
+                let videoPath = media.file_path;
+                console.log('原始视频路径:', videoPath);
+                
+                // 处理路径，确保生成正确的URL格式：/uploads/videos/filename
+                if (!videoPath.startsWith('http://') && !videoPath.startsWith('https://')) {
+                    // 提取文件名
+                    const filename = videoPath.replace(/^.*[\/]/, '');
+                    // 生成正确的视频路径，确保包含videos子目录
+                    videoPath = `/uploads/videos/${filename}`;
+                }
+                console.log('处理后的视频路径:', videoPath);
+                
+                // 使用视频首帧作为封面图，如果没有则使用随机图片
+                const thumbnailUrl = media.thumbnail_path || 'https://picsum.photos/600/400?random=' + uniqueId;
+                
+                // 创建视频卡片，优化播放方式，直接显示视频元素
+                const cardHTML = `
+                    <div class="relative w-full h-64 bg-gray-100">
+                        <!-- 直接使用视频元素，支持点击播放 -->
+                        <video id="${uniqueId}" class="w-full h-full object-cover cursor-pointer" controls poster="${thumbnailUrl}" onclick="this.play()">
+                            <source src="${videoPath}" type="video/mp4">
+                            您的浏览器不支持视频播放
+                        </video>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">${media.title}</h3>
+                        <p class="text-gray-500 text-sm">${media.description || '无描述'}</p>
+                        <p class="text-xs text-gray-400 mt-1">路径: ${videoPath}</p>
+                    </div>
+                `;
+                
+                mediaCard.innerHTML = cardHTML;
+                videosContainer.appendChild(mediaCard);
+                
+                // 验证元素创建
+                const videoElement = mediaCard.querySelector(`#${uniqueId}`);
+                if (videoElement) {
+                    console.log('成功创建视频元素:', uniqueId, videoPath);
+                    // 添加视频加载错误处理
+                    videoElement.addEventListener('error', (e) => {
+                        console.error('视频加载错误:', e.target.error.message, '路径:', videoPath);
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'text-xs text-red-500 p-2 bg-red-50 rounded';
+                        errorMsg.textContent = '视频加载失败: ' + e.target.error.message;
+                        mediaCard.appendChild(errorMsg);
+                    });
+                } else {
+                    console.error('创建视频元素失败:', uniqueId);
+                }
+            }
+
+            // 7. 登录模态框控制
+            loginBtn.addEventListener('click', () => {
+                authModal.classList.add('active');
+                setTimeout(() => {
+                    authModalContent.classList.remove('scale-95', 'opacity-0');
+                    authModalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            });
+
+            closeAuth.addEventListener('click', closeAuthModal);
+            closeUpload.addEventListener('click', () => {
+                uploadModalContent.classList.remove('scale-100', 'opacity-100');
+                uploadModalContent.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    uploadModal.classList.remove('active');
+                    uploadForm.reset();
+                }, 300);
+            });
+
+            function closeAuthModal() {
+                authModalContent.classList.remove('scale-100', 'opacity-100');
+                authModalContent.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    authModal.classList.remove('active');
+                    authForm.reset();
+                }, 300);
+            }
+
+            // 切换登录/注册模式
+            toggleRegister.addEventListener('click', () => {
+                clearErrorMessages();
+                if (authTitle.textContent === '用户登录') {
+                    authTitle.textContent = '用户注册';
+                    toggleRegister.textContent = '已有账号？登录';
+                    authForm.querySelector('button[type="submit"]').textContent = '注册';
+                    registerFields.classList.remove('hidden');
+                } else {
+                    authTitle.textContent = '用户登录';
+                    toggleRegister.textContent = '注册新用户';
+                    authForm.querySelector('button[type="submit"]').textContent = '登录';
+                    registerFields.classList.add('hidden');
+                }
+            });
+
+            // 退出登录
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('currentUser');
+                currentUser = null;
+                isAdmin = false;
+                showToast('已退出登录');
+                updateUIForAuthState();
+                // 重新加载媒体内容
+                loadMediaContent();
+            });
+
+            // 管理员审核相关事件
+            adminReviewBtn.addEventListener('click', openAdminReviewModal);
+            closeAdminReview.addEventListener('click', closeAdminReviewModal);
+            
+            // 点击模态框背景关闭
+            adminReviewModal.addEventListener('click', (e) => {
+                if (e.target === adminReviewModal) {
+                    closeAdminReviewModal();
+                }
+            });
+
+            // 全屏查看功能 - 优化直接显示的视频元素处理
+            window.openFullscreen = function(type, id) {
+                console.log('点击媒体:', type, id);
+                
+                let newElement;
+                
+                // 获取媒体容器，用于直接获取媒体源
+                const container = type === 'image' ? imagesContainer : videosContainer;
+                // 找到对应的媒体卡片
+                const mediaCards = container.querySelectorAll('.media-card');
+                
+                // 遍历找到对应的卡片
+                for (let i = 0; i < mediaCards.length; i++) {
+                    const card = mediaCards[i];
+                    // 检查卡片的onclick事件是否匹配当前id
+                    const onclickAttr = card.getAttribute('onclick');
+                    if (onclickAttr && onclickAttr.includes(id)) {
+                        // 获取卡片内的媒体元素
+                        let cardMediaElement;
+                        if (type === 'image') {
+                            cardMediaElement = card.querySelector('img');
+                        } else {
+                            cardMediaElement = card.querySelector('video');
+                        }
+                        
+                        // 创建新元素
+                        if (type === 'image') {
+                            // 处理图片
+                            newElement = document.createElement('img');
+                            newElement.src = cardMediaElement.src;
+                            newElement.alt = cardMediaElement.alt || '图片';
+                        } else if (type === 'video') {
+                            // 处理视频 - 优化直接显示的视频元素
+                            newElement = document.createElement('video');
+                            // 优化视频播放参数
+                            newElement.controls = true;
+                            newElement.autoplay = true;
+                            newElement.playsInline = true;
+                            newElement.preload = 'auto';
+                            newElement.crossOrigin = 'anonymous';
+                            
+                            // 获取视频源
+                            let videoSrc = '';
+                            const source = cardMediaElement.querySelector('source');
+                            if (source) {
+                                // 情况1：video标签内有source标签
+                                videoSrc = source.src;
+                                console.log('视频源:', videoSrc);
+                                const newSource = document.createElement('source');
+                                newSource.src = videoSrc;
+                                newSource.type = 'video/mp4';
+                                newElement.appendChild(newSource);
+                            } else if (cardMediaElement.src) {
+                                // 情况2：video标签直接设置了src属性
+                                videoSrc = cardMediaElement.src;
+                                console.log('视频源直接设置:', videoSrc);
+                                newElement.src = videoSrc;
+                            }
+                            
+                            // 添加视频事件监听
+                            newElement.addEventListener('loadedmetadata', () => {
+                                console.log('视频元数据加载完成，准备播放');
+                            });
+                            
+                            newElement.addEventListener('error', (e) => {
+                                console.error('视频播放错误:', e.target.error.code, e.target.error.message, '视频URL:', videoSrc);
+                                alert('视频播放失败，请检查网络连接或视频格式');
+                            });
+                        }
+                        break;
+                    }
+                }
+                
+                if (!newElement) {
+                    console.error('未找到匹配的媒体元素:', id);
+                    return;
+                }
+                
+                // 设置样式
+                newElement.style.maxWidth = '100%';
+                newElement.style.maxHeight = '80vh';
+                newElement.style.margin = 'auto';
+                newElement.style.display = 'block';
+                
+                // 显示元素
+                content.innerHTML = '';
+                content.appendChild(newElement);
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeBtn.addEventListener('click', () => {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+                const video = content.querySelector('video');
+                if (video) video.pause();
+            });
+
+            // 工具函数
+            function clearErrorMessages() {
+                [emailError, passwordError, nameError].forEach(el => {
+                    if (el) {
+                        el.classList.remove('show');
+                        el.textContent = '';
+                    }
+                });
+            }
+
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-full shadow-lg z-50 opacity-0 transition-opacity duration-300';
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.classList.replace('opacity-0', 'opacity-100'), 10);
+                setTimeout(() => {
+                    toast.classList.replace('opacity-100', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            // 分类切换功能
+            const btnAll = document.getElementById('btn-all');
+            const btnImages = document.getElementById('btn-images');
+            const btnVideos = document.getElementById('btn-videos');
+
+            btnAll.addEventListener('click', () => {
+                setActiveButton(btnAll);
+                imagesContainer.classList.remove('hidden');
+                videosContainer.classList.remove('hidden');
+            });
+
+            btnImages.addEventListener('click', () => {
+                setActiveButton(btnImages);
+                imagesContainer.classList.remove('hidden');
+                videosContainer.classList.add('hidden');
+            });
+
+            btnVideos.addEventListener('click', () => {
+                setActiveButton(btnVideos);
+                imagesContainer.classList.add('hidden');
+                videosContainer.classList.remove('hidden');
+            });
+
+            function setActiveButton(button) {
+                [btnAll, btnImages, btnVideos].forEach(btn => {
+                    btn.classList.remove('bg-accent', 'text-white');
+                    btn.classList.add('bg-white', 'text-accent');
+                });
+                button.classList.remove('bg-white', 'text-accent');
+                button.classList.add('bg-accent', 'text-white');
+            }
+
+            // 加载媒体内容
+            async function loadMediaContent() {
+                try {
+                    console.log('开始加载媒体内容...');
+                    
+                    // 1. 首先添加默认示例内容
+                    imagesContainer.innerHTML = `
+                        <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('image', 'sample1')">
+                            <img src="图片/Image_2922091434247.jpg" alt="示例图片1" class="w-full h-64 object-cover">
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg">示例图片1</h3>
+                                <p class="text-gray-500 text-sm">这是一张示例图片</p>
+                            </div>
+                            <img id="sample1" src="图片/Image_2922091434247.jpg" class="hidden">
+                        </div>
+                        <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('image', 'sample2')">
+                            <img src="图片/IMG_20250811_223851.jpg" alt="示例图片2" class="w-full h-64 object-cover">
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg">示例图片2</h3>
+                                <p class="text-gray-500 text-sm">这是一张示例图片</p>
+                            </div>
+                            <img id="sample2" src="图片/IMG_20250811_223851.jpg" class="hidden">
+                        </div>
+                    `;
+                    
+                    videosContainer.innerHTML = `
+                        <div class="media-card bg-white rounded-xl overflow-hidden shadow-md cursor-pointer" onclick="openFullscreen('video', 'sample3')">
+                            <div class="relative w-full h-64 bg-gray-100">
+                                <img id="sample3-cover" src="https://picsum.photos/600/400?random=3" alt="示例视频封面" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                                    <div class="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white">
+                                        <i class="fa fa-play text-xl"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg">示例视频</h3>
+                                <p class="text-gray-500 text-sm">这是一个示例视频</p>
+                            </div>
+                            <video id="sample3" class="hidden" controls>
+                                <source src="视频/1.mp4" type="video/mp4">
+                                您的浏览器不支持视频播放
+                            </video>
+                        </div>
+                    `;
+                    
+                    // 重新初始化示例视频封面
+                    initSampleVideoThumbnail();
+                    
+                    // 2. 加载用户上传的图片内容
+                    console.log('加载图片内容...');
+                    const imagesResponse = await fetch(`${API_BASE_URL}/media?type=image`);
+                    console.log('图片API响应状态:', imagesResponse.status);
+                    const imagesData = await imagesResponse.json();
+                    console.log('图片数据:', imagesData);
+                    if (imagesResponse.ok && imagesData.media && Array.isArray(imagesData.media) && imagesData.media.length > 0) {
+                        console.log('发现', imagesData.media.length, '张图片，开始创建卡片...');
+                        imagesData.media.forEach(media => {
+                            createImageCard(media);
+                        });
+                        console.log('图片卡片创建完成');
+                    } else {
+                        console.log('没有找到图片或图片数据格式不正确');
+                    }
+                    
+                    // 3. 加载用户上传的视频内容
+                    console.log('加载视频内容...');
+                    const videosResponse = await fetch(`${API_BASE_URL}/media?type=video`);
+                    console.log('视频API响应状态:', videosResponse.status);
+                    const videosData = await videosResponse.json();
+                    console.log('视频数据:', videosData);
+                    if (videosResponse.ok && videosData.media && Array.isArray(videosData.media) && videosData.media.length > 0) {
+                        console.log('发现', videosData.media.length, '个视频，开始创建卡片...');
+                        videosData.media.forEach(media => {
+                            console.log('处理视频:', media);
+                            createVideoCard(media);
+                        });
+                        console.log('视频卡片创建完成');
+                    } else {
+                        console.log('没有找到视频或视频数据格式不正确');
+                    }
+                    
+                    console.log('媒体内容加载完成');
+                } catch (error) {
+                    console.error('❌ 加载媒体内容失败:', error);
+                    showToast('加载媒体内容失败');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

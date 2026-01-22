@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="不叫奥神的个人主页，提供WAImg.exe软件下载">
+    <meta name="keywords" content="不叫奥神, WAImg, 视频处理, mp4转mp3">
+    <title>不叫奥神官网</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 配置Tailwind自定义颜色和字体 - 粉白色调（保持原有风格统一） -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF85A2', // 主粉色
+                        secondary: '#FFB6C1', // 浅粉色
+                        accent: '#FF69B4', // 深粉色
+                        light: '#FFF5F7', // 极浅粉色背景
+                        dark: '#5A4B51' // 深灰色文字
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(234, 124, 149, 0.2);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+            .hover-lift {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .hover-lift:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(255,133,162,0.15), 0 10px 10px -5px rgba(255,133,162,0.1);
+            }
+            .download-badge {
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background-color: #FF69B4;
+                color: white; /* 修复原文字色错误 */
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #FFF5F7 0%, #FFEBF0 100%);
+            }
+            /* 新增：解压风格大按钮样式 */
+            .big-btn {
+                padding: 12px 32px;
+                font-size: 1.25rem;
+                border-radius: 50px;
+                transition: all 0.4s ease;
+                box-shadow: 0 4px 15px rgba(255,133,162,0.2);
+            }
+            .big-btn:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 8px 20px rgba(255,133,162,0.3);
+                letter-spacing: 0.5px;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter text-dark bg-white">
+    <!-- 导航栏（移除图片库/视频库入口） -->
+    <header id="navbar" class="fixed w-full top-0 z-50 transition-all duration-300 bg-white/95 backdrop-blur-sm shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                        <span class="text-white font-bold text-xl">压</span> <!-- 简化原“压力”文字，适配尺寸 -->
+                    </div>
+                    <span class="text-xl font-bold text-dark">不叫奥神</span>
+                </a>
+                
+                <!-- 桌面导航（删除图片库、视频库） -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="index.html" class="text-primary font-medium transition-custom border-b-2 border-primary pb-1">首页</a>
+                    <a href="#software" class="text-dark hover:text-primary font-medium transition-custom">软件下载</a>
+                    <a href="#about" class="text-dark hover:text-primary font-medium transition-custom">关于我</a>
+                    <a href="#sponsor" class="text-dark hover:text-primary font-medium transition-custom">赞助支持</a>
+                    <!-- 新增：导航栏快速跳转（备用入口） -->
+                    <a href="self-media.html" class="text-accent hover:text-primary font-medium transition-custom">
+                        <i class="fa fa-video-camera mr-1"></i> 自媒体空间
+                    </a>
+                </nav>
+                
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="https://space.bilibili.com/" target="_blank" class="bg-primary hover:bg-accent text-white px-6 py-2 rounded-full font-medium transition-custom shadow-md hover:shadow-lg">
+                        B站主页
+                    </a>
+                </div>
+                
+                <!-- 移动端菜单按钮 -->
+                <button id="menu-toggle" class="md:hidden text-dark focus:outline-none">
+                    <i class="fa fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 移动端导航菜单（删除图片库、视频库，新增自媒体入口） -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-secondary/30">
+            <div class="container mx-auto px-4 py-3 space-y-3">
+                <a href="index.html" class="block text-primary font-medium py-3 transition-custom">首页</a>
+                <a href="#software" class="block text-dark hover:text-primary font-medium py-3 transition-custom">软件下载</a>
+                <a href="#about" class="block text-dark hover:text-primary font-medium py-3 transition-custom">关于我</a>
+                <a href="#sponsor" class="block text-dark hover:text-primary font-medium py-3 transition-custom">赞助支持</a>
+                <a href="self-media.html" class="block text-accent hover:text-primary font-medium py-3 transition-custom">
+                    <i class="fa fa-video-camera mr-2"></i> 前往自媒体空间
+                </a>
+                <a href="https://space.bilibili.com/" target="_blank" class="block bg-primary hover:bg-accent text-white px-6 py-3 rounded-full font-medium text-center transition-custom shadow-md">
+                    B站主页
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 英雄区域（核心：新增超大“前往自媒体空间”按钮，位置显眼） -->
+    <section id="home" class="pt-32 pb-20 md:pt-40 md:pb-32 gradient-bg">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center">
+                <div class="md:w-1/2 mb-10 md:mb-0 text-center md:text-left">
+                    <h1 class="text-[clamp(2.5rem,8vw,4rem)] font-bold leading-tight text-dark mb-6 text-shadow">
+                        <span class="text-primary">软件发布</span>
+                    </h1>
+                    <p class="text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0">
+                        专注于实用工具开发的个人主页，分享我的软件作品和技术心得，更有专属自媒体空间等你来逛！
+                    </p>
+                    <!-- 核心跳转区：原有按钮+新增超大自媒体跳转按钮，空间充足 -->
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center md:justify-start mb-8">
+                        <a href="#software" class="bg-primary hover:bg-accent text-white px-8 py-3 rounded-full font-medium text-center transition-custom shadow-lg hover:shadow-xl flex items-center justify-center">
+                            <i class="fa fa-download mr-2"></i> 下载软件
+                        </a>
+                        <a href="#about" class="border-2 border-primary text-primary hover:bg-primary/5 px-8 py-3 rounded-full font-medium text-center transition-custom">
+                            了解作者 <i class="fa fa-user ml-2"></i>
+                        </a>
+                    </div>
+                    <!-- 新增：超大尺寸“前往自媒体空间”按钮，独立一行更显眼 -->
+                    <div class="flex justify-center md:justify-start">
+                        <a href="self-media.html" class="big-btn bg-accent hover:bg-primary text-white font-semibold flex items-center justify-center">
+                            <i class="fa fa-rocket mr-3 text-xl"></i> 前往我的自媒体空间
+                        </a>
+                    </div>
+                </div>
+                <div class="md:w-1/2 relative">
+                    <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl hover-lift">
+                        <img src="https://picsum.photos/id/1/800/600" alt="软件展示" class="w-full h-auto">
+                    </div>
+                    <div class="absolute -bottom-6 -left-6 w-40 h-40 bg-secondary/20 rounded-full blur-3xl -z-10"></div>
+                    <div class="absolute -top-6 -right-6 w-40 h-40 bg-primary/20 rounded-full blur-3xl -z-10"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能介绍（保留原有） -->
+    <section id="features" class="py-20 bg-white">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold mb-4">软件功能介绍</h2>
+                <p class="text-gray-600 text-lg">这里有各种工具软件，上位机，exe小程序，小游戏等等均为各位用户免费下载！</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- 功能卡片 1 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-exchange"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">MP4转MP3</h3>
+                    <p class="text-gray-600">
+                        快速将视频文件转换为音频格式，支持批量处理，保持原始音质，转换速度快，操作简单。
+                    </p>
+                </div>
+                
+                <!-- 功能卡片 2 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-adjust"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">视频灰度处理</h3>
+                    <p class="text-gray-600">
+                        将彩色视频转换为灰度效果，可调节灰度参数，支持实时预览，处理后的视频保持原分辨率。
+                    </p>
+                </div>
+                
+                <!-- 功能卡片 3 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-picture-o"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">图像二值化</h3>
+                    <p class="text-gray-600">
+                        精确的图像二值化处理功能，可自定义阈值，支持多种二值化算法，适用于图像处理和识别场景。
+                    </p>
+                </div>
+                
+                <!-- 功能卡片 4 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-cogs"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">批量处理</h3>
+                    <p class="text-gray-600">
+                        支持多文件批量处理，节省时间提高效率，可同时转换多个视频或处理多张图片，自动保存结果。
+                    </p>
+                </div>
+                
+                <!-- 功能卡片 5 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-sliders"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">参数自定义</h3>
+                    <p class="text-gray-600">
+                        丰富的参数调节选项，满足不同场景需求，可根据个人偏好调整处理效果，保存个性化配置。
+                    </p>
+                </div>
+                
+                <!-- 功能卡片 6 -->
+                <div class="bg-white rounded-xl p-8 shadow-md hover-lift border border-secondary/30">
+                    <div class="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6 text-primary text-2xl">
+                        <i class="fa fa-bolt"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">高效处理</h3>
+                    <p class="text-gray-600">
+                        优化的处理引擎，快速完成各种任务，低资源占用，不影响电脑其他操作，处理过程稳定可靠。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 软件下载区域（保留原有） -->
+    <section id="software" class="py-20 bg-light">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold mb-4">软件下载</h2>
+                <p class="text-gray-600 text-lg">WAImg.exe 免费使用，欢迎下载体验</p>
+            </div>
+            
+            <!-- 软件下载卡片 -->
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl overflow-hidden shadow-md hover-lift border border-secondary/30 relative group">
+                    <div class="p-8 md:p-10 flex flex-col md:flex-row items-center">
+                        <div class="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center mb-6 md:mb-0 md:mr-8 text-primary text-3xl">
+                            <i class="fa fa-file-image-o"></i>
+                        </div>
+                        <div class="md:flex-1 text-center md:text-left">
+                            <h3 class="text-2xl font-bold mb-3">WAImg.exe</h3>
+                            <p class="text-gray-600 mb-6 max-w-lg mx-auto md:mx-0">
+                                一款集视频转音频、灰度处理和图像二值化于一体的多功能工具，操作简单，功能实用。
+                            </p>
+                            <div class="flex flex-wrap items-center justify-center md:justify-start gap-6 text-sm text-gray-500 mb-6">
+                                <span><i class="fa fa-calendar-o mr-1"></i> 最新版本：v1.2.0</span>
+                                <span><i class="fa fa-file-exe-o mr-1"></i> 文件大小：3.2 MB</span>
+                                <span><i class="fa fa-clock-o mr-1"></i> 更新日期：2023-10-15</span>
+                            </div>
+                            <a href="WAImg.exe" download class="inline-block bg-primary hover:bg-accent text-white px-8 py-3 rounded-lg font-medium transition-custom shadow-md hover:shadow-lg">
+                                <i class="fa fa-download mr-2"></i> 立即下载
+                            </a>
+                        </div>
+                    </div>
+                    <span class="download-badge opacity-0 group-hover:opacity-100 transition-opacity">新</span>
+                </div>
+                
+                <!-- 下载说明与安全提示 -->
+                <div class="mt-12 bg-white p-6 rounded-xl border border-secondary/30">
+                    <h4 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fa fa-shield text-primary mr-2"></i> 下载安全说明
+                    </h4>
+                    <p class="text-gray-600 mb-4">
+                        由于浏览器安全机制，下载EXE文件时可能会出现警告提示，这是正常现象。我们的软件绝对安全，无任何恶意代码。
+                    </p>
+                    <p class="text-gray-600 mb-4 font-medium">如何成功下载：</p>
+                    <ul class="text-gray-600 space-y-2 list-disc pl-5 mb-4">
+                        <li>Chrome浏览器：点击下载栏中的"保留"，然后在弹出的对话框中选择"保留危险文件"</li>
+                        <li>Edge浏览器：点击"更多选项"，然后选择"仍然保留"</li>
+                        <li>Firefox浏览器：选择"保存文件"，忽略安全警告</li>
+                    </ul>
+                    <p class="text-gray-600 text-sm">
+                        <i class="fa fa-info-circle text-primary mr-1"></i> 文件MD5校验值：8a7b6c5d4e3f2g1h0i9j8k7l6m5n4o（可用于验证文件完整性）
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 使用教程（保留原有） -->
+    <section class="py-20 bg-light">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold mb-4">使用教程</h2>
+                <p class="text-gray-600 text-lg">简单几步，快速掌握WAImg.exe的使用方法</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+                <!-- 步骤1 -->
+                <div class="bg-white rounded-xl p-6 text-center hover-lift">
+                    <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">1</div>
+                    <h3 class="font-bold mb-3">下载安装</h3>
+                    <p class="text-gray-600 text-sm">下载WAImg.exe文件，双击运行，无需安装直接使用</p>
+                </div>
+                
+                <!-- 步骤2 -->
+                <div class="bg-white rounded-xl p-6 text-center hover-lift">
+                    <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">2</div>
+                    <h3 class="font-bold mb-3">选择功能</h3>
+                    <p class="text-gray-600 text-sm">在主界面选择需要的功能：MP4转MP3、灰度处理或二值化</p>
+                </div>
+                
+                <!-- 步骤3 -->
+                <div class="bg-white rounded-xl p-6 text-center hover-lift">
+                    <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">3</div>
+                    <h3 class="font-bold mb-3">添加文件</h3>
+                    <p class="text-gray-600 text-sm">点击"添加文件"按钮，选择需要处理的视频或图片文件</p>
+                </div>
+                
+                <!-- 步骤4 -->
+                <div class="bg-white rounded-xl p-6 text-center hover-lift">
+                    <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">4</div>
+                    <h3 class="font-bold mb-3">开始处理</h3>
+                    <p class="text-gray-600 text-sm">设置输出路径和参数，点击"开始处理"按钮，等待完成</p>
+                </div>
+            </div>
+            
+            <div class="mt-12 text-center">
+                <p class="text-gray-600">如需更多帮助，可通过下方"联系方式"咨询</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 关于我（保留原有） -->
+    <section id="about" class="py-20 bg-white">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-12">
+                <div class="lg:w-1/2 relative">
+                    <div class="relative z-10">
+                        <img src="图片/OIP-C.jpg" alt="关于我" class="rounded-2xl shadow-xl w-full h-auto">
+                        <div class="absolute -bottom-6 -right-6 bg-white p-6 rounded-xl shadow-lg border border-secondary/30">
+                            <div class="text-primary font-bold text-xl mb-1">作者: ITKeiller-WA</div>
+                            <p class="text-gray-600">热爱编程与分享的开发者</p>
+                        </div>
+                    </div>
+                    <div class="absolute -top-6 -left-6 w-40 h-40 bg-accent/20 rounded-full blur-3xl -z-10"></div>
+                </div>
+                <div class="lg:w-1/2">
+                    <h2 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold mb-6">关于我</h2>
+                    <p class="text-gray-600 mb-6 text-lg">
+                        大家好，我是ITKeiller-WA，也可以叫我"不叫奥神"。我是一名热爱编程和分享的开发者，主要专注于实用工具软件开发，同时运营多个自媒体平台分享技术内容。
+                    </p>
+                    <p class="text-gray-600 mb-8 text-lg">
+                        我开发的WAImg软件旨在为用户提供简单高效的多媒体处理解决方案，无论是日常使用还是专业需求都能满足。我的自媒体空间会分享软件教程、开发心得，欢迎来访！
+                    </p>
+                    
+                    <div class="grid grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <div class="text-4xl font-bold text-primary mb-2">100+</div>
+                            <p class="text-gray-600">技术文章</p>
+                        </div>
+                        <div>
+                            <div class="text-4xl font-bold text-primary mb-2">50+</div>
+                            <p class="text-gray-600">教学视频</p>
+                        </div>
+                        <div>
+                            <div class="text-4xl font-bold text-primary mb-2">15+</div>
+                            <p class="text-gray-600">开发软件</p>
+                        </div>
+                        <div>
+                            <div class="text-4xl font-bold text-primary mb-2">5k+</div>
+                            <p class="text-gray-600">B站粉丝</p>
+                        </div>
+                    </div>
+                    
+                    <a href="https://space.bilibili.com/" target="_blank" class="inline-block bg-primary hover:bg-accent text-white px-8 py-3 rounded-full font-medium transition-custom shadow-lg hover:shadow-xl">
+                        访问我的B站 <i class="fa fa-external-link ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 赞助支持（保留原有） -->
+    <section id="sponsor" class="py-20 bg-light">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl mx-auto text-center mb-16">
+                <h2 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold mb-4">赞助支持</h2>
+                <p class="text-gray-600 text-lg">
+                    如果觉得我的软件对你有帮助，欢迎给我一点点支持~ 你的每一份鼓励都是我继续开发和创作自媒体内容的动力！
+                </p>
+            </div>
+            
+            <div class="max-w-md mx-auto bg-white rounded-2xl p-8 shadow-md border border-secondary/30 text-center">
+                <div class="mb-6">
+                    <i class="fa fa-heart text-accent text-4xl animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-4">感谢您的赞助</h3>
+                <p class="text-gray-600 mb-8">
+                    无论金额大小，都是对我最大的支持和肯定，我会继续努力开发更多实用工具、创作更多优质自媒体内容！
+                </p>
+                
+                <!-- 收款码（保留赞助相关图片） -->
+                <div class="bg-white p-4 rounded-xl inline-block shadow-sm mb-6">
+                    <img src="收款码.jpg" alt="微信收款码" class="w-64 h-64 object-contain" onError="this.src='https://picsum.photos/256/256'; this.alt='收款码（请将收款码图片放在根目录下）'">
+                </div>
+                
+                <p class="text-sm text-gray-500">
+                    扫码即可赞助，感谢您的支持！
+                </p>
+            </div>
+            
+            <!-- 联系方式（保留原有） -->
+            <div class="max-w-3xl mx-auto mt-16 text-center">
+                <h3 class="text-xl font-bold mb-6">联系方式</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl hover-lift">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+                            <i class="fa fa-envelope text-xl"></i>
+                        </div>
+                        <h4 class="font-bold mb-2">邮箱</h4>
+                        <a href="mailto:1513019038@qq.com" class="text-gray-600 hover:text-primary transition-custom">1513019038@qq.com</a>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl hover-lift">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+                            <i class="fa fa-qq text-xl"></i>
+                        </div>
+                        <h4 class="font-bold mb-2">QQ粉丝群</h4>
+                        <p class="text-gray-600">1038203727</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚（保留原有，新增自媒体空间链接） -->
+    <footer class="bg-white py-16 border-t border-secondary/30">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                <div>
+                    <a href="index.html" class="flex items-center space-x-2 mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">K</span>
+                        </div>
+                        <span class="text-xl font-bold text-dark">不叫奥神</span>
+                    </a>
+                    <p class="text-gray-600 mb-6">
+                        作者: ITKeiller-WA<br>
+                        B站关注: 小keil同学
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="https://space.bilibili.com/" target="_blank" class="text-gray-400 hover:text-primary transition-custom">
+                            <i class="fa fa-bilibili text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition-custom">
+                            <i class="fa fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition-custom">
+                            <i class="fa fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-bold mb-6">快速链接</h4>
+                    <ul class="space-y-3">
+                        <li><a href="index.html" class="text-gray-600 hover:text-primary transition-custom">首页</a></li>
+                        <li><a href="#software" class="text-gray-600 hover:text-primary transition-custom">软件下载</a></li>
+                        <li><a href="#about" class="text-gray-600 hover:text-primary transition-custom">关于我</a></li>
+                        <li><a href="#sponsor" class="text-gray-600 hover:text-primary transition-custom">赞助支持</a></li>
+                        <li><a href="self-media.html" class="text-accent hover:text-primary transition-custom">自媒体空间</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-bold mb-6">资源导航</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-custom">使用教程</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-custom">常见问题</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-custom">更新日志</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-custom">开发计划</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-custom">其他工具</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-bold mb-6">支持与帮助</h4>
+                    <p class="text-gray-600 mb-4">
+                        有任何问题或建议，欢迎通过联系方式与我沟通，我会尽快回复。
+                    </p>
+                    <a href="#sponsor" class="inline-block bg-primary/10 hover:bg-primary/20 text-primary px-5 py-2 rounded-lg font-medium transition-custom">
+                        联系我
+                    </a>
+                </div>
+            </div>
+            
+            <div class="border-t border-secondary/30 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-500 text-sm mb-4 md:mb-0">
+                    &copy; 2023 不叫奥神 - 作者: ITKeiller-WA
+                </p>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-500 hover:text-primary text-sm transition-custom">隐私政策</a>
+                    <a href="#" class="text-gray-500 hover:text-primary text-sm transition-custom">使用条款</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 回到顶部按钮（保留原有） -->
+    <button id="back-to-top" class="fixed bottom-6 right-6 bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg opacity-0 invisible transition-all duration-300 hover:bg-accent z-50">
+        <i class="fa fa-arrow-up"></i>
+    </button>
+
+    <!-- JavaScript（保留原有，修复原文字色错误） -->
+    <script>
+        // 1. 移动端菜单切换
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 2. 导航栏滚动效果
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('py-2', 'shadow-md');
+                navbar.classList.remove('py-4', 'shadow-sm');
+            } else {
+                navbar.classList.add('py-4', 'shadow-sm');
+                navbar.classList.remove('py-2', 'shadow-md');
+            }
+        });
+
+        // 3. 平滑滚动到锚点
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                // 关闭移动菜单（如果打开）
+                if (!mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                }
+                // 滚动到目标位置
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80, // 避开导航栏
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // 4. 回到顶部按钮
+        const backToTopButton = document.getElementById('back-to-top');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopButton.classList.remove('opacity-0', 'invisible');
+                backToTopButton.classList.add('opacity-100', 'visible');
+            } else {
+                backToTopButton.classList.add('opacity-0', 'invisible');
+                backToTopButton.classList.remove('opacity-100', 'visible');
+            }
+        });
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // 5. 图片加载错误处理（保留，因仍有作者图、收款码等必要图片）
+        document.querySelectorAll('img').forEach(img => {
+            img.addEventListener('error', function() {
+                // 收款码特殊处理
+                if (this.alt.includes('收款码')) {
+                    this.src = '收款码.jpg';
+                    this.alt = '收款码（请将"收款码.jpg"放在根目录）';
+                } 
+                // 其他图片
+                else {
+                    this.src = 'https://picsum.photos/400/300';
+                    this.alt = '图片加载失败';
+                }
+            });
+        });
+
+        // 6. 检查软件文件是否存在
+        function checkFileExists(url) {
+            fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    if (!response.ok) throw new Error('文件不存在');
+                })
+                .catch(error => {
+                    document.querySelectorAll(`a[href="${url}"]`).forEach(link => {
+                        link.classList.remove('bg-primary', 'hover:bg-accent');
+                        link.classList.add('bg-gray-300', 'cursor-not-allowed');
+                        link.innerHTML = '<i class="fa fa-exclamation-circle mr-2"></i> 文件暂未上传';
+                        link.removeAttribute('download');
+                        link.removeAttribute('href');
+                    });
+                });
+        }
+
+        // 7. 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            // 检查软件文件
+            checkFileExists('WAImg.exe');
+        });
+    </script>
+</body>
+</html>
